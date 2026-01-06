@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Geladeira CT - Controle</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --border: #e2e8f0;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      padding: 28px;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    }
+
+    h1 {
+      font-size: 22px;
+      margin-bottom: 24px;
+      text-align: center;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #64748b;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      font-size: 16px; 
+      transition: border-color 0.2s;
+      outline: none;
+      background: #f1f5f9;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--primary);
+      background: #fff;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 16px;
+      border-radius: 12px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    button:disabled {
+      background: #cbd5e1;
+    }
+
+    .msg {
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 10px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 600;
+      display: none;
+    }
+
+    .msg-success {
+      background: #dcfce7;
+      color: #166534;
+      display: block;
+    }
+
+    .loader {
+      display: none;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #fff;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🥤 Geladeira CT</h1>
+    <form id="form">
+      <div class="form-group">
+        <label for="nome">Quem é você?</label>
+        <input type="text" id="nome" required placeholder="Seu nome" autocomplete="name" />
+      </div>
+
+      <div class="form-group">
+        <label for="item">O que pegou?</label>
+        <input type="text" id="item" required placeholder="Ex: Coca-cola, Água..." />
+      </div>
+
+      <div class="form-group">
+        <label for="valor">Valor (R$)</label>
+        <input type="text" id="valor" required placeholder="0,00" inputmode="numeric" />
+      </div>
+
+      <div class="form-group">
+        <label for="pagamento">Forma de Pagamento</label>
+        <select id="pagamento">
+          <option value="Não pago">❌ Vou pagar depois</option>
+          <option value="Pix">📱 Pix</option>
+          <option value="Dinheiro">💵 Dinheiro</option>
+        </select>
+      </div>
+
+      <button type="submit" id="btnSubmit">
+        <span id="btnText">Registrar Agora</span>
+        <div class="loader" id="loader"></div>
+      </button>
+    </form>
+    <div class="msg" id="msg">✅ Registrado com sucesso!</div>
+  </div>
+
+  <script>
+    const form = document.getElementById('form');
+    const msg = document.getElementById('msg');
+    const btnSubmit = document.getElementById('btnSubmit');
+    const btnText = document.getElementById('btnText');
+    const loader = document.getElementById('loader');
+    const valorInput = document.getElementById('valor');
+
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbwZTSU6DKsKMRiQM3zbC6SbhRMHpXkpyF4CbqhTfydWyZxUhF64BKy867E78QLHw2LWDg/exec';
+
+    // MÁSCARA AUTOMÁTICA DE MOEDA
+    valorInput.addEventListener('input', (e) => {
+      let value = e.target.value.replace(/\D/g, '');
+      value = (value / 100).toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+      e.target.value = value;
+    });
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      btnSubmit.disabled = true;
+      btnText.style.display = 'none';
+      loader.style.display = 'block';
+
+      // Converte o valor da máscara (ex: 5,50) de volta para número puro (5.50) para enviar à planilha
+      const valorLimpo = valorInput.value.replace(/\./g, '').replace(',', '.');
+
+      const data = {
+        nome: document.getElementById('nome').value,
+        item: document.getElementById('item').value,
+        valor: valorLimpo,
+        pagamento: document.getElementById('pagamento').value
+      };
+
+      fetch(scriptURL, {
+        method: 'POST',
+        mode: 'no-cors',
+        body: JSON.stringify(data)
+      })
+      .then(() => {
+        form.reset();
+        msg.classList.add('msg-success');
+        setTimeout(() => {
+          msg.classList.remove('msg-success');
+        }, 4000);
+      })
+      .catch(() => alert('Erro ao registrar. Verifique sua conexão.'))
+      .finally(() => {
+        btnSubmit.disabled = false;
+        btnText.style.display = 'block';
+        loader.style.display = 'none';
+      });
+    });
+  </script>
+</body>
+</html>
